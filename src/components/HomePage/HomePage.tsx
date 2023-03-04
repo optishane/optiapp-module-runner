@@ -7,6 +7,7 @@ import ParentSize from '@visx/responsive/lib/components/ParentSize';
 // @ts-ignore
 // import { Api } from "https://cdn.optilogic.app/web/optijs/api.js";
 import { Api } from '../Api.ts';
+// <script type="module" src=""></script>
 
 interface File {
     filename: string,
@@ -91,7 +92,7 @@ export default function HomePage(props: any) {
         setPageView('loading');
 
         await optiApi?.workspaceJobify('Studio', batch, '3xs', 'run from 3rd party app!, OptiJS')
-        .catch(err => console.error(err));
+        .catch((err: any) => console.error(err));
 
         // Subscribe to listening to the jobs after submitting them all.
         jobsInterval.current = window.setInterval(async () => {
@@ -102,7 +103,7 @@ export default function HomePage(props: any) {
                 }));
                 setLoadingText('');
                 setPageView('job-view')
-            }).catch(err => console.error(err))
+            }).catch((err: any) => console.error(err))
         }, JOBS_DATA_REFRESH_MS);
 
         // Call it right away to allow for faster display of the chart.
@@ -114,7 +115,7 @@ export default function HomePage(props: any) {
             }));
             setLoadingText('');
             setPageView('job-view')
-        }).catch(err => console.error(err))
+        }).catch((err: any) => console.error(err))
 
     }
 
@@ -157,7 +158,7 @@ export default function HomePage(props: any) {
             {pageView === 'home' &&
                 <>
                     <h1>
-                        Welcome To OptiJS
+                        Welcome to the Python Module Runner
                     </h1>
                     <TextField variant='standard' className="input" onChange={(e: any) => setAppKey(e.target.value)} value={appKey} placeholder='Enter Your App Key' />
                     <Button className="get-started-btn" onClick={handleSubmitAppKey}>
