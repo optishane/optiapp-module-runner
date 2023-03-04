@@ -134,7 +134,7 @@ export default function HomePage(props: any) {
     useEffect(() => {
         const terminalStates = ['done', 'stopped', 'error', 'cancelled'];
 
-        // If every job has reached its end, wipe the interval, and prompt the user.
+        // If every job has reached its end, wipe the interval, and prompt the user .
         if (data.every((job) => terminalStates.includes(job.status))) {
             window.clearInterval(jobsInterval.current as any);
             setPromptActivity(true);
