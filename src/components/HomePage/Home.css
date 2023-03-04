@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Tilt+Warp&display=swap');
+
+body {
+    display: flex;
+    flex-direction: column;
+    background-color: #00302E;
+    justify-content: center;
+    align-items: center;
+    margin: none;
+    font-family: 'Tilt Warp, cursive' !important;
+}
+
+h1{
+    color: #F9F9F9;
+    font-weight: bold;
+    font-size: 5rem;
+    animation: fadeIn;
+}
+
+h2{
+    color: #F9F9F9;
+    font-weight: bold;
+    font-size: 3.5rem;
+    animation: fadeIn;
+}
+
+.home-wrapper {
+    display: flex;
+    flex-direction: column;
+    background-color: #00302E;
+    justify-content: center;
+    align-items: center;
+    margin-top: -2rem;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden;
+}
+
+.get-started-btn {
+    color: #F9F9F9 !important;
+    background-color: #44BD7E !important;
+    height: 5rem;
+    width: 10rem;
+    font-size: 1rem !important;
+    font-weight: bold !important;
+    margin-top: 2rem !important;
+    animation: fadeIn;
+}
+
+.get-started-btn:hover {
+    color: #F9F9F9 !important;
+    background-color: #319762 !important;
+    height: 5rem;
+    width: 10rem;
+    font-size: 1rem !important;
+    font-weight: bold !important;
+    margin-top: 2rem !important;
+}
+
+.input {
+    color: #000;
+    background-color: #F9F9F9;
+    height: 2rem;
+    width: auto;
+    padding: 1rem;
+    text-align: center !important;
+    border-radius: 5px;
+}
+
+.input::placeholder{
+    text-align: center !important;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(2rem);
+    }
+    100%{
+        opacity: 1;
+        transform: translateY(0rem)
+    }
+}
