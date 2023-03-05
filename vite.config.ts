@@ -10,4 +10,7 @@ export default defineConfig({
     emptyOutDir: true
   },
   plugins: [react()],
+  resolve: {
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx'],
+  },
 })
