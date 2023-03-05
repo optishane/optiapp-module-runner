@@ -72,7 +72,7 @@ export default function HomePage(props: any) {
     const [data, setData] = useState([] as Job[]);
 
     const handleSubmitAppKey = async () => {
-        setLoadingText('Retrieving Your Python Files...');
+        setLoadingText('Retrieving Your Python Files... ');
         setPageView('loading');
         const api = new Api(appKey);
         setOptiApi(api);
