@@ -1,7 +1,6 @@
 {
   "name": "optiapp-module-runner",
   "homepage": "https://optishane.github.io/optiapp-module-runner/",
-  "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
