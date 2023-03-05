@@ -1,13 +1,14 @@
 {
   "name": "optiapp-module-runner",
   "homepage": "https://optishane.github.io/optiapp-module-runner/",
+  "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "predeploy": "npm run build",
+    "predeploy": "tsc && vite build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
