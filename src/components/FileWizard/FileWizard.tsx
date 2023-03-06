@@ -90,7 +90,7 @@ export default function FileWizard(props: FileWizardProps) {
                                     />
                                 </TableCell>
                                 <TableCell>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', columnGap: '1rem' }}>
                                         <b>
                                             Select All
                                         </b>
@@ -153,9 +153,6 @@ export default function FileWizard(props: FileWizardProps) {
                                 )
                             })}
                         </TableBody>
-                        {/* <TableFooter>
-
-                        </TableFooter> */}
                     </Table>
                 </Paper>
             </Box>
