@@ -15,6 +15,7 @@ interface storageDevice {
 
 const delay = (ms: any) => new Promise((res) => setTimeout(res, ms));
 
+// CHANGE THIS TO BE PROD's API IF TEST IS DOWN
 export class Api {
   apiDomain?: string = "https://api.optilogic.app";
   apiCrashCount?: number = 0;

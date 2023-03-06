@@ -1,10 +1,10 @@
-import { Box, Checkbox, Paper, Table, TableBody, TableCell, TableFooter, TableHead, TableRow, Button } from '@mui/material';
+import { Box, Checkbox, Paper, Table, TableBody, TableCell, MenuItem, TableHead, TableRow, Button, Select } from '@mui/material';
 import React, { useState, useEffect, } from 'react';
 import './FileWizard.css';
 
 interface FileWizardProps {
     files: File[],
-    onSubmitRun: (files: string[]) => void
+    onSubmitRun: (files: string[], resourceSize: string) => void
 }
 
 interface File {
@@ -20,6 +20,21 @@ export default function FileWizard(props: FileWizardProps) {
     const [selected, setSelected] = useState([] as string[]);
     const [numSelected, setNumSelected] = useState(0);
     const [rowCount, setRowCount] = useState(files.length);
+    const [resourceSize, setResourceSize] = useState('mini');
+    const resourceTypes = [
+        '4XL',
+        '3XL',
+        '2XL',
+        'XL',
+        'L',
+        'M',
+        'S',
+        'XS',
+        '2XS',
+        '3XS',
+        '4XS',
+        'mini'
+    ]
 
 
     const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +75,7 @@ export default function FileWizard(props: FileWizardProps) {
         <div className='file-wiz-wrapper'>
             <Box sx={{ width: '100%' }}>
                 <Paper sx={{ width: '100%', mb: 2 }}>
-                    <Table stickyHeader>
+                    <Table stickyHeader size='small'>
                         <TableHead>
                             <TableRow>
                                 <TableCell padding="checkbox">
@@ -75,12 +90,23 @@ export default function FileWizard(props: FileWizardProps) {
                                     />
                                 </TableCell>
                                 <TableCell>
-                                    Select All
-                                </TableCell>
-                                <TableCell>
-                                    <Button className="run-files-btn" onClick={() => onSubmitRun(selected)}>
-                                        Run Files
-                                    </Button>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <b>
+                                            Select All
+                                        </b>
+                                        <Select size='small' sx={{ marginLeft: '1rem', width: '5rem' }} value={resourceSize} onChange={(e) => setResourceSize(e.target.value)}>
+                                            {resourceTypes.map((item) => {
+                                                return (
+                                                    <MenuItem key={item} value={item}>
+                                                        {item}
+                                                    </MenuItem>
+                                                )
+                                            })}
+                                        </Select>
+                                        <Button disabled={selected.length === 0} className={selected.length > 0 ? "run-files-btn" : "disabled-run-files-btn"} onClick={() => onSubmitRun(selected, resourceSize)}>
+                                            Run Modules
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         </TableHead>
@@ -88,8 +114,8 @@ export default function FileWizard(props: FileWizardProps) {
                             {files.slice().map((fileRow, idx) => {
                                 const isItemSelected = isSelected(fileRow.filePath);
                                 const labelId = `enhanced-table-checkbox-${idx}`;
-                                
-                                if(!fileRow.filename.endsWith('.py')){
+
+                                if (!fileRow.filename.endsWith('.py')) {
                                     return;
                                 }
 

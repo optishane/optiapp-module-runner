@@ -1,14 +1,23 @@
 .file-wiz-wrapper {
-  max-height: 80%;
+  height: 80%;
   width: auto;
   overflow: auto;
+  background: #fff;
+  border-radius: 0.5rem;
 }
 
 .run-files-btn {
   background-color: #44BD7E !important;
   color: #f9f9f9 !important;
+  white-space: nowrap;
 }
 
 .run-files-btn:hover {
   background-color: #319762 !important;
+}
+
+.disabled-run-files-btn {
+  background-color: #616161 !important;
+  color: #f9f9f9 !important;
+  white-space: nowrap;
 }
