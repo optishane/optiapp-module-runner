@@ -1,3 +1,5 @@
+import path from 'path-browserify';
+
 interface batchItem {
   pyModulePath: string;
   pySearchTerm?: string;
@@ -13,11 +15,56 @@ interface storageDevice {
   type: "string";
 }
 
+interface OptiError {
+  error: Error,
+  message?: string,
+}
+
+interface File {
+  filename: string,
+  directoryPath: string,
+  contentLength: number,
+  filePath: string,
+}
+
+interface User {
+  name: string,
+  username: string,
+  email: string,
+  apiConcurrentSolvesMax: number,
+  workspaceCount: number,
+}
+
+interface Job {
+  billedTime: string,
+  endDateTime: string,
+  jobInfo: {
+    command: string,
+    directoryPath: string,
+    filename: string,
+    resourceConfig: {
+      cpu: string,
+      name: string,
+      ram: string,
+      run_rate: number
+    },
+    tags: string,
+    timeout: string,
+    workspace: string
+  },
+  jobKey: string,
+  runRate: number,
+  runTime: string,
+  startDatetime: string,
+  status: string,
+  submittedDatetime: string
+}
+
 const delay = (ms: any) => new Promise((res) => setTimeout(res, ms));
 
-// CHANGE THIS TO BE PROD's API IF TEST IS DOWN
+// CHANGE apiDomain TO BE PROD's API IF TEST IS DOWN
 export class Api {
-  apiDomain?: string = "https://api.optilogic.app";
+  apiDomain?: string = "https://dev-api.optilogic.app";
   apiCrashCount?: number = 0;
   authAppKey: string;
   authReqHeader?: HeadersInit;
@@ -107,7 +154,7 @@ export class Api {
     runSecsMin?: number,
     runSecsMax?: string,
     tags?: string
-  ) {
+  ): Promise<Job[] | Error> {
     let url = `${this.apiVersion}${wksp}/jobs?`;
 
     let query = "";
@@ -122,11 +169,12 @@ export class Api {
       url += query.slice(1, query.length);
     }
 
-    const response = await fetch(url, {
+    return await fetch(url, {
       headers: this.authReqHeader,
-    }).then((res) => res.json());
-
-    return response;
+    })
+      .then((res) => res.json())
+      .then(res => res.jobs)
+      .catch(err => err);
   }
 
   /**
@@ -155,7 +203,7 @@ export class Api {
     batch: batch,
     resourceConfig?: string,
     tags?: string
-  ) {
+  ): Promise<boolean | Error> {
     let url = `${this.apiVersion}${wksp}/jobBatch/jobify?`;
     let query = "";
     query += resourceConfig ? `&resourceConfig=${resourceConfig}` : "";
@@ -165,15 +213,16 @@ export class Api {
       url += query.slice(1, query.length);
     }
 
-    console.log("==========BATCH=========:", batch);
+    // console.log("==========BATCH=========:", batch);
 
-    const response = await fetch(url, {
+    return await fetch(url, {
       headers: this.authReqHeader,
       method: "POST",
       body: JSON.stringify(batch),
-    }).then((res) => res.json());
-
-    return response;
+    })
+      .then(res => res.json())
+      .then(res => res.status === "success" ? true : false)
+      .catch(err => err)
   }
 
   /**GET ​/v0​/{workspace}​/files - List all user files in the workspace
@@ -181,14 +230,42 @@ export class Api {
     @param wksp: str: where your files live
     @param filter: str: regex str on full file path, defautls to None
     */
-  async workspaceFiles(wksp: string, filter?: string) {
+  async workspaceFiles(wksp: string, filter?: string): Promise<File[] | Error> {
     let url = `${this.apiVersion}${wksp}/files`;
     url += filter ? `?filter=${filter}` : "";
 
-    const response = await fetch(url, {
+    return await fetch(url, {
       headers: this.authReqHeader,
-    }).then((res) => res.json());
+    })
+      .then(res => res.json())
+      .then(res => res.files)
+      .catch(err => err);
+  }
 
-    return response;
+  //GET AUTH app key
+  async authorizeAppKey(appKey: string): Promise<boolean | Error> {
+    let url = `${this.apiVersion}account`;
+    return await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-APP-KEY": appKey
+      }
+    })
+      .then(res => res.json())
+      .then(res => res.result.toLowerCase() === 'success' ? true : false)
+      .catch(err => err);
+  }
+
+  //GET AUTH app key
+  async getUserFromAppKey(appKey: string): Promise<User | Error> {
+    let url = `${this.apiVersion}account`;
+    return await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-APP-KEY": appKey
+      }
+    })
+      .then(res => res.json())
+      .catch(err => err);
   }
 }

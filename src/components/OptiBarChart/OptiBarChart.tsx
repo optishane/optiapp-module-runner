@@ -1,13 +1,17 @@
-import { AxisBottom } from "@visx/axis";
+import { AxisLeft, AxisBottom } from "@visx/axis";
 import { localPoint } from "@visx/event";
 import { Grid } from "@visx/grid";
 import { Group } from "@visx/group";
+import { Line } from "@visx/shape";
 import { scaleBand, scaleLinear, scaleOrdinal } from "@visx/scale";
 import { BarStack } from "@visx/shape";
 import { SeriesPoint } from "@visx/shape/lib/types";
 import { defaultStyles, useTooltip, useTooltipInPortal } from "@visx/tooltip";
+import { quantize } from 'd3-interpolate';
+import { interpolateRainbow } from 'd3-scale-chromatic';
+import { LegendOrdinal, LegendItem, LegendLabel } from '@visx/legend';
 import { get } from 'lodash';
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 function groupBy(xs: any[], f: (item: any) => any) {
     return xs.reduce((r, v, i, a, k = f(v)) => ((r[k] || (r[k] = [])).push(v), r), {});
@@ -29,32 +33,32 @@ export interface OptiBarChart {
     data: any[],
     stackCategory: string,
     xAxisCategory: string,
-    events?: boolean
+    events?: boolean,
+    maxLine?: number
 };
 
 type TooltipData = {
-    bar: SeriesPoint<StackBarData>;
+    bar?: SeriesPoint<StackBarData>;
     key: string;
     index: number;
-    height: number;
-    width: number;
-    x: number;
-    y: number;
     color: string;
+    stringValue?: string;
 };
 
 let tooltipTimeout: number;
 
-export default function OptiBarChart({ width, height, data, xAxisCategory, events = false, stackCategory }: OptiBarChart) {
+export default function OptiBarChart({ width, height, data, xAxisCategory, events = false, stackCategory, maxLine }: OptiBarChart) {
     const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, hideTooltip, showTooltip } = useTooltip<TooltipData>();
     const [xAxisValues, setXAxisValues] = React.useState<string[]>([] as string[]);
     const [chartData, setChartData] = React.useState<any[]>([] as any[]);
     const [xCategory, setXCategory] = React.useState('');
     const [stackCategoryField, setStackCategoryField] = React.useState([] as string[]);
     const [aggregatedData, setAggregatedData] = React.useState([] as any[])
-    const margin = { top: 40, right: 0, bottom: 0, left: 0 };
+    const margin = { top: 40, right: 200, bottom: 150, left: 0 };
+    const xOffset = 30;
     const [xMax, setXMax] = React.useState(0);
     const [yMax, setYMax] = React.useState(0);
+    const [colors, setColors] = React.useState([] as string[]);
 
     React.useEffect(() => {
         setXMax(width);
@@ -78,19 +82,64 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
 
     const scaleXAxis = React.useMemo(() => scaleBand({
         domain: xAxisValues,
-        range: [0, xMax]
+        range: [0, xMax - margin.left - margin.right]
     }), [xAxisValues, xMax, xCategory]);
 
+    const colorMap = useRef<Record<string, string> | undefined>();
+
+    // creates a custom color scale with 150 colors
+    const customColorScale = scaleOrdinal<string>({
+        range: quantize(interpolateRainbow, 10),
+    });
+
+    function getColorForString(str: string): string {
+        // lodash get
+        const checkString = str.toLowerCase()
+        const existingColor = colorMap.current?.[checkString];
+        if (existingColor) {
+            return existingColor;
+        }
+
+        // Calculate a hash code for the input string
+        let hash = 0;
+        for (let i = 0; i < checkString.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+
+        const color = customColorScale(hash.toString());
+
+        // Store the color in the color map and return it
+        colorMap.current = { ...colorMap.current, [checkString]: color } as Record<string, string>;
+
+        return color as string;
+    }
+
+    useEffect(() => {
+        setColors(stackCategoryField.map((category: string) => getColorForString(category)));
+    }, [stackCategoryField]);
+
+
+    // Generate an array of colors using a color scale
     const colorScale = React.useMemo(() => scaleOrdinal({
         domain: xAxisValues,
-        range: ['#636292', '#44bd7e', '#f5787b', '#929bef', '#909090', '#f5cf47', '#5766f2'],
-    }), [xAxisValues, xCategory]);
+        range: colors as string[],
+    }), [xAxisValues, xCategory, colors]);
 
-    const scaleYAxis = React.useMemo(() => scaleLinear<number>({
-        domain: [0, categoryTotals.sort((a:any, b:any) => (a < b ? -1 : 1)).at(-1) || 100],
-        range: [yMax, 0],
-        nice: true
-    }), [yMax, aggregatedData, stackCategoryField, xCategory]);
+    // Generate an array of colors using a color scale
+    // const dataColorScale = React.useMemo(() => scaleOrdinal({
+    //     domain: aggregatedData,
+    //     range: aggregatedData.map(d => getColorForString(d.name)),
+    // }), [xAxisValues, xCategory, colors]);
+
+    const scaleYAxis = React.useMemo(() => {
+        const categoryTotalMax = categoryTotals.sort((a: any, b: any) => (a < b ? -1 : 1)).at(-1) || 0;
+        const maxLineVal = maxLine ? maxLine + 10 : 10;
+        return scaleLinear<number>({
+            domain: [0, categoryTotalMax > maxLineVal ? categoryTotalMax : maxLineVal],
+            range: [yMax, 0],
+            nice: true
+        })
+    }, [yMax, aggregatedData, stackCategoryField, xCategory, maxLine]);
 
     const getUniqueValues = (data: any[], propertyName: string): string[] => {
         const propertyValues = data.map(item => get(item, propertyName));
@@ -116,7 +165,13 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
             return { category: key, ...stackCats };
         });
         setAggregatedData(newData);
-        setXAxisValues([...new Set(chartData.map(item => get(item, xCategory, 'unknown').toString()))]);
+        let values = [""];
+        if (xCategory === 'status') {
+            values = ["submitted", "running", "stopped", "cancelled", "error", "done"];
+        } else {
+            values = [...new Set(chartData.map(item => get(item, xCategory, 'unknown').toString()))].sort();
+        }
+        setXAxisValues(values);
     }, [chartData, xCategory, stackCategoryField]);
 
     React.useEffect(() => {
@@ -129,22 +184,51 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
                 <rect x={0} y={0} width={xMax} height={height > 0 ? height : 0} fill={'#efefef'} rx={14} />
                 <Grid
                     top={margin.top}
-                    left={margin.left}
+                    left={margin.left + xOffset}
                     xScale={scaleXAxis}
                     yScale={scaleYAxis}
-                    width={xMax}
+                    width={xMax - margin.right}
                     height={yMax > 0 ? yMax : 0}
-                    stroke="black"
+                    stroke='black'
                     strokeOpacity={0.1}
                     xOffset={scaleXAxis.bandwidth() / 2}
+                    rowTickValues={Array.from({ length: yMax }, (_, i) => i + 1)}
                 />
                 <Group top={margin.top}>
+                    <Line
+                        x1={margin.top}
+                        y1={scaleYAxis(maxLine || 0)}
+                        x2={xMax - 175}
+                        y2={scaleYAxis(maxLine || 0)}
+                        stroke="#1976d2"
+                        strokeWidth={3}
+                        strokeDasharray="50 4"
+                        strokeOpacity={0.3}
+                        onMouseLeave={() => {
+                            tooltipTimeout = window.setTimeout(() => {
+                                hideTooltip();
+                            }, 300);
+                        }}
+                        onMouseOver={(event) => {
+                            if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                            // TooltipInPortal expects coordinates to be relative to containerRef
+                            // localPoint returns coordinates relative to the nearest SVG, which
+                            // is what containerRef is set to in this example.
+                            const eventSvgCoords = localPoint(event);
+                            showTooltip({
+                                tooltipData: { key: 'Maximum Concurrent Jobs', index: -1, color: '#1976d2', stringValue: maxLine?.toString() },
+                                tooltipTop: eventSvgCoords?.y,
+                                tooltipLeft: eventSvgCoords?.x
+                            });
+                        }}
+                    />
                     <BarStack
                         data={aggregatedData}
                         keys={stackCategoryField}
                         x={(item) => (item.category)}
                         xScale={scaleXAxis}
                         yScale={scaleYAxis}
+                        // fill='gray'
                         color={colorScale}
                     >
                         {(barStacks) =>
@@ -152,11 +236,11 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
                                 barStack.bars.map((bar) => (
                                     <rect
                                         key={`bar-stack-${barStack.index}-${bar.index}`}
-                                        x={bar.x + (bar.width / 4)}
+                                        x={bar.x + (bar.width / 4) + xOffset}
                                         y={bar.y}
                                         height={bar.height > 0 ? bar.height : 0}
                                         width={bar.width / 2}
-                                        fill={bar.color}
+                                        fill={getColorForString(bar.key)}
                                         onClick={() => {
                                             if (events) alert(`clicked: ${JSON.stringify(bar)}`);
                                         }}
@@ -175,7 +259,7 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
                                             showTooltip({
                                                 tooltipData: bar,
                                                 tooltipTop: eventSvgCoords?.y,
-                                                tooltipLeft: left,
+                                                tooltipLeft: eventSvgCoords?.x,
                                             });
                                         }}
                                     />
@@ -183,9 +267,17 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
                             )
                         }
                     </BarStack>
+                    <AxisLeft
+                        scale={scaleYAxis}
+                        label={'Count'}
+                        numTicks={10}
+                        tickFormat={value => value.toLocaleString()}
+                        left={xOffset}
+                    />
                 </Group>
                 <AxisBottom
                     top={height - 50}
+                    left={margin.left + xOffset}
                     scale={scaleXAxis}
                     stroke={'black'}
                     tickStroke={'black'}
@@ -196,14 +288,52 @@ export default function OptiBarChart({ width, height, data, xAxisCategory, event
                     })}
                 />
             </svg>
+            <div
+                style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '40px',
+                }}
+            >
+                <LegendOrdinal scale={colorScale} labelFormat={(label) => `${label}`}>
+                    {(labels) => (
+                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '150px' }}>
+                            {labels.filter(l => !['submitted', 'running', 'stopped', 'cancelled', 'error', 'done'].includes(l.text.toLowerCase())).map((label, i) => (
+                                <LegendItem
+                                    key={`legend-quantile-${i}`}
+                                    margin="0 5px"
+                                    style={{ display: 'flex', flexDirection: 'row', columnGap: '0.5rem', alignItems: 'flex-start', overflow: 'hidden' }}
+                                    onClick={() => {
+                                        if (events) alert(`clicked: ${JSON.stringify(label)}`);
+                                    }}
+                                >
+                                    <div>
+                                        <svg width={15} height={15} style={{ margin: '2px 0' }}>
+                                            <rect
+                                                fill={getColorForString(label.text || 's')}
+                                                height={15}
+                                                width={15}
+                                            />
+                                        </svg>
+                                    </div>
+                                    <LegendLabel style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {label.text}
+                                    </LegendLabel>
+                                </LegendItem>
+                            ))}
+                        </div>
+                    )}
+                </LegendOrdinal>
+            </div >
             {tooltipOpen && tooltipData && (
                 <TooltipInPortal top={tooltipTop} left={tooltipLeft} style={defaultStyles}>
-                    <div style={{ color: colorScale(tooltipData.key) }}>
-                        <strong>{tooltipData.key}</strong>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '5rem'}}>{get(tooltipData.bar.data, tooltipData.key)}</div>
-                    <div>
-                        <small>{ }</small>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ color: getColorForString(tooltipData.key), marginBottom: '0.5rem' }}>
+                            <strong>{tooltipData.key}</strong>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '5rem' }}>
+                            {tooltipData.bar ? get(tooltipData.bar.data, tooltipData.key) : tooltipData.stringValue}
+                        </div>
                     </div>
                 </TooltipInPortal>
             )}

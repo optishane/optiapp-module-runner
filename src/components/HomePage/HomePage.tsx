@@ -1,61 +1,14 @@
-import { Box, Button, CircularProgress, Dialog, TextField } from '@mui/material';
-import ParentSize from '@visx/responsive/lib/components/ParentSize';
-import { useEffect, useRef, useState } from 'react';
-// @ts-ignore
-// import { Api } from "https://cdn.optilogic.app/web/optijs/api.js";
-import { Api } from '../Api.ts';
+import { Button, CircularProgress, Input, TextField, Box, Dialog, List, ListItem } from '@mui/material';
+import { SetStateAction, useEffect, useRef, useState } from 'react';
+import './Home.css';
 import FileWizard from '../FileWizard/FileWizard';
 import OptiBarChart from "../OptiBarChart/OptiBarChart";
-import './Home.css';
+import ParentSize from '@visx/responsive/lib/components/ParentSize';
 
-interface File {
-    filename: string,
-    directoryPath: string,
-    contentLength: number,
-    filePath: string,
-}
-
-interface batchItem {
-    pyModulePath: string;
-    pySearchTerm?: string;
-    commandArg?: string;
-    timeout?: string;
-}
-
-interface batch {
-    batchItems: batchItem[];
-}
-
-interface JobResponse {
-    count: number,
-    filters: Object,
-    jobs: Job[],
-}
-
-interface Job {
-    billedTime: string,
-    endDateTime: string,
-    jobInfo: {
-        command: string,
-        directoryPath: string,
-        filename: string,
-        resourceConfig: {
-            cpu: string,
-            name: string,
-            ram: string,
-            run_rate: number
-        },
-        tags: string,
-        timeout: string,
-        workspace: string
-    },
-    jobKey: string,
-    runRate: number,
-    runTime: string,
-    startDatetime: string,
-    status: string,
-    submittedDatetime: string
-}
+// @ts-ignore
+import { Api } from "https://cdn.optilogic.app/web/optijs/api.js";
+// @ts-ignore
+import {File, batch, Job } from "https://cdn.optilogic.app/web/optijs/interfaces.d.ts"
 
 export default function HomePage(props: any) {
     const [appKey, setAppKey] = useState('');
@@ -63,7 +16,11 @@ export default function HomePage(props: any) {
     const [optiApi, setOptiApi] = useState<null | Api>();
     const [pythonFiles, setPythonFiles] = useState([] as File[]);
     const [loadingText, setLoadingText] = useState('');
+    const [loading, setIsLoading] = useState(false);
+    const [showErrorText, setShowErrorText] = useState(false)
+    const [errorText, setErrorText] = useState('App Key Is Invalid!')
     const [jobsSubmitted, setJobsSubmitted] = useState(false);
+    const [maxConcurrency, setMaxConcurrency] = useState(0);
 
     // chart related state
     const JOBS_DATA_REFRESH_MS = 5000;
@@ -72,14 +29,33 @@ export default function HomePage(props: any) {
     const [showModal, setShowModal] = useState(false);
 
     const handleSubmitAppKey = async () => {
-        setLoadingText('Retrieving Your Python Modules...');
-        setPageView('loading-files');
+        setIsLoading(true);
         const api = new Api(appKey);
-        setOptiApi(api);
+        const userResponse = await api.getUserFromAppKey(appKey);
+
+        if (userResponse instanceof Error) {
+            setShowErrorText(true);
+            setErrorText('App Key Is Invalid!')
+            setPageView('home');
+        }
+        else {
+            setMaxConcurrency(userResponse.apiConcurrentSolvesMax || 0);
+            setLoadingText('Retrieving Your Python Modules...');
+            setPageView('loading-files');
+            setShowErrorText(false);
+            setOptiApi(api);
+        };
+        setTimeout(() => { setIsLoading(false) }, 3000)
     }
 
+    const resetFlow = () => {
+        setShowErrorText(false);
+        setIsLoading(false)
+        setAppKey('')
+    };
+
     const handleSubmitRun = async (files: string[], rs: string) => {
-        setJobsSubmitted(true);
+        setJobsSubmitted(true)
         const batch: batch = {
             batchItems: files.map((item, idx) => {
                 return {
@@ -89,45 +65,68 @@ export default function HomePage(props: any) {
                 }
             })
         }
-        setLoadingText('Submitting Module Runs...');
+        setLoadingText('Submitting Your Jobs...');
         setPageView('loading-jobs');
 
-        await optiApi?.workspaceJobify('Studio', batch, rs || '3xs', 'opti-module-runner')
-            .catch((err: any) => console.error(err));
+        await optiApi?.workspaceJobify('Studio', batch, rs || 'mini', 'opti-module-runner')
+        .catch(err => console.error(err));
 
         // Subscribe to listening to the jobs after submitting them all.
-        if (jobsInterval.current) {
-            window.clearInterval(jobsInterval.current as any);
-        }
         jobsInterval.current = window.setInterval(async () => {
-            await optiApi?.workspaceJobs('Studio', '', '1').then((res: any) => {
-                setData(res.jobs.filter((job: Job) => {
+            await optiApi?.workspaceJobs('Studio', '', '1').then((res: Job[] | Error) => {
+                if(res instanceof Error){
+                    return res;
+                }
+                setData(res.filter((job: Job) => {
                     const sessionStart = parseInt(sessionStorage.getItem('sessionStart') || '0')
                     return new Date(job.submittedDatetime).getTime() > sessionStart;
                 }));
                 setLoadingText('');
                 setPageView('job-view')
-            }).catch((err: any) => console.error(err))
+            }).catch(err => console.error(err))
         }, JOBS_DATA_REFRESH_MS);
 
         // Call it right away to allow for faster display of the chart.
-        await optiApi?.workspaceJobs('Studio', '', '1').then((res: any) => {
+        await optiApi?.workspaceJobs('Studio', '', '1').then((res: Job[] | Error) => {
             // Filter jobs from the one day filter response, so we only see the ones ran from this session.
-            setData(res.jobs.filter((job: Job) => {
+            if(res instanceof Error){
+                return res;
+            }
+            setData(res.filter((job: Job) => {
                 const sessionStart = parseInt(sessionStorage.getItem('sessionStart') || '0')
                 return new Date(job.submittedDatetime).getTime() > sessionStart;
             }));
             setLoadingText('');
             setPageView('job-view')
-        }).catch((err: any) => console.error(err))
+        }).catch(err => console.error(err))
 
+    }
+
+    const getStatusSummary = () => {
+        const statuses = {};
+        data.forEach((item) => {
+            item.status in statuses ? statuses[item.status] += 1 : statuses[item.status] = 1
+        });
+
+        return data ? Object.keys(statuses).map(item => 
+            <ListItem>
+                {`${statuses[item]} completed as ${item}`}
+            </ListItem>
+        ) : <></>
     }
 
     useEffect(() => {
         if (optiApi) {
-            optiApi.workspaceFiles('Studio', '\.py').then((res: any) => {
-                setPythonFiles(res.files);
-                setPageView('wizard');
+            optiApi.workspaceFiles('Studio', '\.py').then((res: File[] | Error) => {
+                if (Array.isArray(res)) {
+                    setPythonFiles(res);
+                    setPageView('wizard');
+                }
+                else {
+                    setPageView('home')
+                    resetFlow();
+                    setShowErrorText(true);
+                }
             });
         }
 
@@ -173,8 +172,16 @@ export default function HomePage(props: any) {
                             Copy or Create a New App Key
                         </a>
                     </p>
-                    <TextField variant='standard' inputProps={{ className: 'input' }} className="input" onChange={(e: any) => setAppKey(e.target.value)} value={appKey} placeholder='Enter Your App Key' />
-                    <Button className="get-started-btn" onClick={handleSubmitAppKey}>
+                    {showErrorText && <b style={{ marginBottom: '1rem', color: '#ef5350' }}>{errorText}</b>}
+                    <TextField
+                        className='input'
+                        variant='standard'
+                        onChange={(e: any) => setAppKey(e.target.value)}
+                        value={appKey}
+                        placeholder='Enter Your App Key'
+                        inputProps={{ className: 'input' }}
+                    />
+                    <Button disabled={loading || appKey.length === 0} className={loading || appKey.length === 0 ? "get-started-btn-disabled" : "get-started-btn"} onClick={handleSubmitAppKey}>
                         Blast Off
                     </Button>
                 </div>
@@ -199,16 +206,16 @@ export default function HomePage(props: any) {
                             <CircularProgress sx={{ color: '#f9f9f9' }} />
                         </div> :
                         data.length > 0 ?
-                            <Box sx={{ height: '90%', width: '90%' }}>
+                            <Box sx={{ height: '90%', width: '70%' }}>
                                 <ParentSize>
-                                    {({ width, height }) => <OptiBarChart width={width} height={height} data={data} xAxisCategory="status" stackCategory="jobInfo.filename" />}
+                                    {({ width, height }) => <OptiBarChart width={width} height={height} data={data} xAxisCategory="status" stackCategory="jobInfo.filename" maxLine={maxConcurrency} />}
                                 </ParentSize>
                             </Box> :
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                                 <h2>
-                                    { jobsSubmitted && data.length == 0 ? 'Waiting for Modules to Start' : pageView == 'loading-files' ? '' : 'Select Python Modules to Run'}
+                                    {jobsSubmitted && data.length == 0 ? 'Waiting for Modules to Start' : pageView == 'loading-files' ? '' : 'Select Python Modules to Run'}
                                 </h2>
-                                {jobsSubmitted && data.length == 0 ? <CircularProgress sx={{ color: '#f9f9f9' }} /> : <></> }
+                                {jobsSubmitted && data.length == 0 ? <CircularProgress sx={{ color: '#f9f9f9' }} /> : <></>}
                             </div>
                     }
                 </div>
@@ -217,6 +224,11 @@ export default function HomePage(props: any) {
             <Dialog onClose={handleClose} open={showModal}>
                 <div className='finish-dialog'>
                     <h3 style={{ margin: '1rem' }}>Your Jobs Have Finished!</h3>
+                    <div>
+                        <List>
+                            {getStatusSummary()}
+                        </List>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'row', columnGap: '1rem', margin: '1rem' }}>
                         <Button variant='contained' onClick={handleClose}>
                             Dismiss

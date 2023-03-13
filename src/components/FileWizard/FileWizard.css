@@ -1,6 +1,6 @@
 .file-wiz-wrapper {
-  height: 80%;
-  width: auto;
+  height: 90% !important;
+  width: 80% !important;
   overflow: auto;
   background: #fff;
   border-radius: 0.5rem;

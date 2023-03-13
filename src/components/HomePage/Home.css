@@ -1,85 +1,95 @@
-@import url('https://fonts.googleapis.com/css2?family=Tilt+Warp&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Tilt+Warp&display=swap");
 
 body {
-    display: flex;
-    flex-direction: column;
-    background-color: #00302E;
-    justify-content: center;
-    align-items: center;
-    margin: none;
-    font-family: 'Tilt Warp, cursive' !important;
+  display: flex;
+  flex-direction: column;
+  background-color: #00302e;
+  justify-content: center;
+  align-items: center;
+  margin: none;
+  font-family: "Tilt Warp, cursive" !important;
 }
 
-h1{
-    color: #F9F9F9;
-    font-weight: bold;
-    font-size: 5rem;
-    animation: fadeIn;
+h1 {
+  color: #f9f9f9;
+  font-weight: bold;
+  font-size: 5rem;
+  animation: fadeIn;
 }
 
-h2{
-    color: #F9F9F9;
-    font-weight: bold;
-    font-size: 3.5rem;
-    animation: fadeIn;
+h2 {
+  color: #f9f9f9;
+  font-weight: bold;
+  font-size: 3.5rem;
+  animation: fadeIn;
 }
 
 .home-wrapper {
-    display: flex;
-    flex-direction: column;
-    background-color: #00302E;
-    height: 100% !important;
-    width: 100% !important;
-    overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: #00302e;
+  height: 100% !important;
+  width: 100% !important;
+  overflow: hidden;
 }
 
 .get-started-btn {
-    color: #F9F9F9 !important;
-    background-color: #44BD7E !important;
-    height: 5rem;
-    width: 10rem;
-    font-size: 1rem !important;
-    font-weight: bold !important;
-    margin-top: 2rem !important;
-    animation: fadeIn;
+  color: #f9f9f9 !important;
+  background-color: #44bd7e !important;
+  height: 5rem;
+  width: 10rem;
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  margin-top: 2rem !important;
+  animation: fadeIn;
+}
+
+.get-started-btn-disabled {
+  background-color: #616161 !important;
+  color: #f9f9f9 !important;
+  height: 5rem;
+  width: 10rem;
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  margin-top: 2rem !important;
 }
 
 .get-started-btn:hover {
-    color: #F9F9F9 !important;
-    background-color: #319762 !important;
-    height: 5rem;
-    width: 10rem;
-    font-size: 1rem !important;
-    font-weight: bold !important;
-    margin-top: 2rem !important;
+  color: #f9f9f9 !important;
+  background-color: #319762 !important;
+  height: 5rem;
+  width: 10rem;
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  margin-top: 2rem !important;
 }
 
 .keylink {
-    color: #44BD7E !important;
-    text-decoration: #44BD7E;
+  color: #44bd7e !important;
+  text-decoration: #44bd7e;
 }
 
 .keylink:hover {
-    color: #c7c7c7 !important;
-    text-decoration: #319762;
+  color: #c7c7c7 !important;
+  text-decoration: #319762;
 }
 
 .app-link {
-    color: #F9F9F9 !important;
+  color: #f9f9f9 !important;
 }
 
 .input {
-    color: #000;
-    background-color: #F9F9F9;
-    height: 2rem;
-    width: auto;
-    padding: 1rem;
-    text-align: center !important;
-    border-radius: 5px;
+  color: #000;
+  background-color: #f9f9f9;
+  height: 2rem;
+  width: auto;
+  padding: 1rem;
+  text-align: center !important;
+  border-radius: 5px;
 }
 
-.input::placeholder{
-    text-align: center !important;
+.input::placeholder {
+  text-align: center !important;
 }
 
 .finish-dialog {
@@ -93,12 +103,12 @@ h2{
 }
 
 @keyframes fadeIn {
-    0% {
-        opacity: 0;
-        transform: translateY(2rem);
-    }
-    100%{
-        opacity: 1;
-        transform: translateY(0rem)
-    }
+  0% {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0rem);
+  }
 }
